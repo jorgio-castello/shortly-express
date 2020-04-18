@@ -80,6 +80,23 @@ app.get('/login', (req, res) => {
   res.render('login');
 });
 
+app.post('/login', (req, res) => {
+  let { username, password } = req.body;
+  return models.Users.get({username})
+    .then(result => {
+      if (!result) {
+        throw new Error ('user not found!');
+      }
+      // call compareHash on submitted password, stored pw, salt
+      if (models.Users.compare(password, result.password, result.salt)) {
+        res.redirect('/');
+      } else {
+        res.redirect('/login');
+      }
+    }).catch(() => {
+      res.redirect('/login');
+    });
+});
 
 app.get('/signup', (req, res) => {
   res.render('signup');
@@ -88,13 +105,11 @@ app.get('/signup', (req, res) => {
 // SIGN UP for post request
 app.post('/signup', (req, res) => {
   let { username, password } = req.body;
-
   return models.Users.get({username})
     .then(result => {
       if (result) {
         throw new Error('user exists, redirecting back to sign up');
       }
-
       return models.Users.create({username, password})
         .then(result => {
           res.redirect('/');
