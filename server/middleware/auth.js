@@ -2,74 +2,42 @@ const models = require('../models');
 const Promise = require('bluebird');
 
 module.exports.createSession = (req, res, next) => {
-  //check if req.cookies['shortlyid'] doesn't exist
-  //console.log(req.cookies);
 
-  //  CHECKS IF THE REQUEST HAS A COOKIE FOR THIS SITE
-  if (!req.cookies['shortlyid']) {
-    //IF NOT, CREATES A HASH IN THE SESSIONS TABLE, ASSIGN THE HASH TO THE SESSIONS AND RESPONSE COOKES (NO USERID)
-    //Create a hash and add it to dbsh
-    return models.Sessions.create()
-      .then(hash => {
-        return models.Sessions.get({id: hash.insertId})
-          .then(data => {
-            req.session = {
-              'hash': data.hash
-            };
-            res.cookie('shortlyid', data.hash);
-            next();
-          });
-      });
-
-  // IF REQUEST DOES HAVE A COOKIE FOR THIS SITE -->
-  } else {
-    req.session = {
-      'hash': req.cookies['shortlyid']
-    };
-    return models.Sessions.get({'hash': req.session.hash})
-      .then(sessionCheck => {
-
-        // IF THE REQUEST HAS A SHORTLY KEY BUT NOT RECORDED VALUE IN THE SESSION TABLE->
-        if (!sessionCheck) {
-          return models.Sessions.create()
-            .then(hash => {
-              return models.Sessions.get({id: hash.insertId})
-                .then(data => {
-                  req.session = {
-                    'hash': data.hash
-                  };
-                  res.cookie('shortlyid', data.hash);
-                  next();
-                });
-            });
-        }
-        // IF THE REQUEST HAS A HASH THAT IS IN SESSIONS TABLE THAT HAS A USER ID
-        if (sessionCheck.userId !== null) {
-          return models.Users.get({'id': sessionCheck.userId})
-            .then(userCheck => {
-              req.session.user = {
-                username: userCheck.username
-              };
-              req.session.userId = userCheck.id;
-              var userID = req.session.userId;
-              console.log('userID', userID);
-              return models.Sessions.get({'hash': req.session.hash})
-                .then(result => {
-                  console.log('result: ', result);
-                  res.cookie('shortlyid', req.cookies['shortlyid']);
-                  res.cookie('username', userCheck.username);
-                  next();
-                });
-            });
-
-        // IF REQUEST HAS A HASH IN THE SESSION TALBE BUT DOES NOT HAVE A USER ID
-        } else {
-          res.cookie('shortlyid', req.cookies['shortlyid']);
-          next();
-        }
-      }).catch(() => {});
-  }
+  //Check if there's a shortly cookie using Promise.resolve
+  Promise.resolve(req.cookies['shortlyid'])
+    .then(hash => {
+      if (!hash) {
+        throw hash;
+      }
+      return models.Sessions.get({ hash });
+    })
+    .then(session => {
+      if (!session) {
+        throw session;
+      }
+      return session;
+    })
+    .catch(() => {
+      return models.Sessions.create()
+        .then(hash => {
+          return models.Sessions.get({id: hash.insertId});
+        })
+        .then(data => {
+          res.cookie('shortlyid', data.hash);
+          return data;
+        });
+    })
+    .then(session => {
+      req.session = session;
+      next();
+    });
 };
+//Check to see if there's a hash / session, and if not throw errors to the catch
+//The catch will start a new session, and assign a cookie to the response w/ the hash
+//Session will be re-assigned to req.session, invoke next
+
+
+
 
 /************************************************************/
 // Add additional authentication middleware functions below

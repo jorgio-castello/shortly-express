@@ -83,42 +83,67 @@ app.get('/login', (req, res) => {
   res.render('login');
 });
 //req, parseCookies, createSession, res
-app.post('/login', (req, res) => {
+app.post('/login', (req, res, next) => {
   let { username, password } = req.body;
   return models.Users.get({username})
     .then(result => {
-      if (!result) {
+      if (!result || !models.Users.compare(password, result.password, result.salt)) {
         throw new Error ('user not found!');
       }
-      // call compareHash on submitted password, stored pw, salt
-      if (models.Users.compare(password, result.password, result.salt)) {
-        console.log(res.cookie);
-        res.redirect('/');
-      } else {
-        res.redirect('/login');
-      }
-    }).catch(() => {
+
+      return models.Sessions.update({ hash: req.session.hash }, { userId: result.id });
+    })
+    .then(() => {
+      res.redirect('/');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    })
+    .catch(() => {
       res.redirect('/login');
     });
 });
+
+app.get('/logout', (req, res, next) => {
+
+  return models.Sessions.delete({ hash: req.cookies.shortlyid })
+    .then(() => {
+      res.clearCookie('shortlyid');
+      res.redirect('/login');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    });
+});
+
+//^solid logic
+
+//need a 'logout' page
 
 app.get('/signup', (req, res) => {
   res.render('signup');
 });
 
 // SIGN UP for post request
-app.post('/signup', (req, res) => {
+app.post('/signup', (req, res, next) => {
   let { username, password } = req.body;
   return models.Users.get({username})
     .then(result => {
       if (result) {
         throw new Error('user exists, redirecting back to sign up');
       }
-      return models.Users.create({username, password})
-        .then(result => {
-          res.redirect('/');
-        });
-    }).catch(() => {
+      return models.Users.create({username, password});
+    })
+    .then(results => {
+      return models.Sessions.update({hash: req.session.hash}, {userId: results.insertId});
+    })
+    .then(() => {
+      res.redirect('/');
+    })
+    .error(error => {
+      res.status(500).send(error);
+    })
+    .catch(() => {
       res.redirect('/signup');
     });
 });
