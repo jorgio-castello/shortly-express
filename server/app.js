@@ -5,6 +5,7 @@ const partials = require('express-partials');
 const bodyParser = require('body-parser');
 const Auth = require('./middleware/auth');
 const models = require('./models');
+const CookieParser = require('./middleware/cookieParser');
 
 const app = express();
 
@@ -14,6 +15,8 @@ app.use(partials());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
+app.use(CookieParser);
+app.use(Auth.createSession);
 
 app.get('/',
   (req, res) => {
@@ -79,7 +82,7 @@ app.post('/links',
 app.get('/login', (req, res) => {
   res.render('login');
 });
-
+//req, parseCookies, createSession, res
 app.post('/login', (req, res) => {
   let { username, password } = req.body;
   return models.Users.get({username})
@@ -89,6 +92,7 @@ app.post('/login', (req, res) => {
       }
       // call compareHash on submitted password, stored pw, salt
       if (models.Users.compare(password, result.password, result.salt)) {
+        console.log(res.cookie);
         res.redirect('/');
       } else {
         res.redirect('/login');
