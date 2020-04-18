@@ -23,6 +23,20 @@ module.exports.createSession = (req, res, next) => {
     };
     return models.Sessions.get({'hash': req.session.hash})
       .then(sessionCheck => {
+        if (!sessionCheck) {
+          return models.Sessions.create()
+            .then(hash => {
+              return models.Sessions.get({id: hash.insertId})
+                .then(data => {
+                  req.session = {
+                    'hash': data.hash
+                  };
+                  res.cookie('shortlyid', data.hash);
+                  next();
+                });
+            });
+        }
+        // if logged in? >
         if (sessionCheck.userId !== null) {
           return models.Users.get({'id': sessionCheck.userId})
             .then(userCheck => {
@@ -33,6 +47,10 @@ module.exports.createSession = (req, res, next) => {
               res.cookie('shortlyid', req.cookies['shortlyid']);
               next();
             });
+
+          // else if we have a cookie, but failed login
+          //new logic
+
         } else {
           res.cookie('shortlyid', req.cookies['shortlyid']);
           next();
