@@ -18,17 +18,17 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(CookieParser);
 app.use(Auth.createSession);
 
-app.get('/',
+app.get('/', Auth.validateAuthentication,
   (req, res) => {
     res.render('index');
   });
 
-app.get('/create',
+app.get('/create', Auth.validateAuthentication,
   (req, res) => {
     res.render('index');
   });
 
-app.get('/links',
+app.get('/links', Auth.validateAuthentication,
   (req, res, next) => {
     models.Links.getAll()
       .then(links => {
@@ -39,7 +39,7 @@ app.get('/links',
       });
   });
 
-app.post('/links',
+app.post('/links', Auth.validateAuthentication,
   (req, res, next) => {
     var url = req.body.url;
     if (!models.Links.isValidUrl(url)) {

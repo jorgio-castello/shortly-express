@@ -51,10 +51,10 @@ module.exports.createSession = (req, res, next) => {
               };
               req.session.userId = userCheck.id;
               var userID = req.session.userId;
-              console.log('userID', userID);
+              //console.log('userID', userID);
               return models.Sessions.get({'hash': req.session.hash})
                 .then(result => {
-                  console.log('result: ', result);
+                  //console.log('result: ', result);
                   res.cookie('shortlyid', req.cookies['shortlyid']);
                   res.cookie('username', userCheck.username);
                   next();

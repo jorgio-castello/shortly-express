@@ -35,7 +35,13 @@ module.exports.createSession = (req, res, next) => {
 //Check to see if there's a hash / session, and if not throw errors to the catch
 //The catch will start a new session, and assign a cookie to the response w/ the hash
 //Session will be re-assigned to req.session, invoke next
-
+module.exports.validateAuthentication = function(req, res, next) {
+  if (!models.Sessions.isLoggedIn(req.session)) {
+    res.redirect('/login');
+  } else {
+    next();
+  }
+};
 
 
 
